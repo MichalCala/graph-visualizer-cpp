@@ -13,3 +13,16 @@ target_include_directories(
     PRIVATE
     include
 )
+
+find_package(SFML 3 REQUIRED COMPONENTS Graphics)
+
+add_executable(
+    graph_visualizer_gui
+    src/gui_main.cpp
+)
+
+target_link_libraries(
+    graph_visualizer_gui
+    PRIVATE
+    SFML::Graphics
+)
