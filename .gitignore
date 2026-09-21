@@ -1,0 +1,11 @@
+# Pliki generowane przez CMake
+build/
+cmake-build-*/
+
+# Pliki kompilacji
+*.exe
+*.o
+*.obj
+
+# Ustawienia edytora
+.vscode/
