@@ -6,6 +6,11 @@
 #include <string>
 #include <iostream>
 
+#include <SFML/System/Clock.hpp>
+#include <algorithm>
+#include <cstddef>
+#include <vector>
+
 #include "Graph.hpp"
 
 int main()
@@ -56,18 +61,129 @@ int main()
         return 1;
     }
 
+    // Wierzcholek, od ktorego rozpoczniemy DFS
+    int startVertex = 0;
+
+    // Kolejnosc odwiedzania wierzcholkow
+    std::vector<int> dfsOrder;
+
+    // Informacja, ktore wierzcholki zostaly odwiedzone
+    std::vector<bool> visited(
+        graph.NumberOfVertices(), false
+    );
+
+    // Numer kolejnego kroku animacji
+    std::size_t nextStep = 0;
+
+    // Czy animacja jest uruchomiona?
+    bool animating = false;
+
+    // Zegar odmierzajacy czas miedzy krokami
+    sf::Clock stepClock;
+
     while (window.isOpen())
     {
         // Obsluga zamykania okna
+        
         while (const std::optional event = window.pollEvent())
         {
-            if (event->is<sf::Event::Closed>())
+            //Zamykanie okna
+            if(event->is<sf::Event::Closed>())
             {
                 window.close();
             }
+
+            //Oblsuga klawiatury
+            if(const auto* key = event->getIf<sf::Event::KeyPressed>())
+            {
+                //Spacja - rozpoczecie DFS
+                if(key->code == sf::Keyboard::Key::Space)
+                {
+                    dfsOrder = graph.DFS(startVertex);
+
+                    std::fill(
+                        visited.begin(),
+                        visited.end(),
+                        false
+                    );
+
+                    nextStep = 0;
+                    animating = !dfsOrder.empty();
+
+                    stepClock.restart();
+                }
+                // R - reset animacji
+                if (key->code == sf::Keyboard::Key::R)
+                {
+                    animating = false;
+                    nextStep = 0;
+
+                    dfsOrder.clear();
+
+                    std::fill(
+                        visited.begin(),
+                        visited.end(),
+                        false
+                    );
+                }
+            }
+
+            // Obsluga klikniecia mysza
+            if (const auto* mouse = event->getIf<sf::Event::MouseButtonPressed>())
+            {
+                if (mouse->button == sf::Mouse::Button::Left)
+                {
+                    for (int i = 0; i < graph.NumberOfVertices(); ++i)
+                    {
+                        float dx = mouse->position.x - positions[i].x;
+                        float dy = mouse->position.y - positions[i].y;
+
+                        // Sprawdzamy, czy kliknieto wewnatrz kola
+                        if (dx * dx + dy * dy <= 22.f * 22.f)
+                        {
+                            startVertex = i;
+
+                            // Zatrzymujemy poprzednia animacje
+                            animating = false;
+                            nextStep = 0;
+                            dfsOrder.clear();
+                            std::fill(
+                                visited.begin(),
+                                visited.end(),
+                                false
+                            );
+
+                            break;
+                        }
+                    }
+                }
+            }
+
         }
 
         window.clear(sf::Color(30, 30, 30));
+        
+        // Wykonujemy jeden krok DFS co pol sekundy
+        if (animating && stepClock.getElapsedTime().asSeconds() >= 0.5f)
+        {
+            // Pobieramy numer kolejnego wierzcholka
+            int vertex = dfsOrder[nextStep];
+
+            // Oznaczamy go jako odwiedzony
+            visited[vertex] = true;
+
+            // Przechodzimy do nastepnego kroku
+            ++nextStep;
+
+            // Uruchamiamy zegar od nowa
+            stepClock.restart();
+
+            // Sprawdzamy, czy animacja sie zakonczyla
+            if (nextStep >= dfsOrder.size())
+            {
+                animating = false;
+            }
+        }
 
         // 5. Rysowanie krawedzi
         sf::VertexArray edges(sf::PrimitiveType::Lines);
@@ -131,8 +247,23 @@ int main()
         sf::CircleShape vertex(22.f);
 
         vertex.setOrigin({22.f, 22.f});
-        vertex.setPosition(positions[i]);
-        vertex.setFillColor(sf::Color(70, 150, 255));
+        vertex.setPosition(positions[i]);        
+        // Kolorowanie wierzcholkow
+        if (visited[i])
+        {
+            // Odwiedzony wierzcholek - zielony
+            vertex.setFillColor(sf::Color(50, 200, 100));
+        }
+        else if (i == startVertex)
+        {
+            // Wybrany wierzcholek startowy - zolty
+            vertex.setFillColor(sf::Color(255, 200, 50));
+        }
+        else
+        {
+            // Nieodwiedzony wierzcholek - niebieski
+            vertex.setFillColor(sf::Color(70, 150, 255));
+        }
 
         window.draw(vertex);
 
