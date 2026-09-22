@@ -21,6 +21,7 @@ private:
 public:
     Graph(int vertices, bool isDirected);
 
+    int AddVertex();
     void AddEdge(int from, int to);
 
     bool IsEdge(int from, int to) const;

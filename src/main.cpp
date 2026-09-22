@@ -21,6 +21,12 @@ int main()
     graph.AddEdge(8, 6);
     graph.AddEdge(0, 8);
 
+    int newVertex = graph.AddVertex();
+
+    std::cout << "Dodano wierzcholek: " << newVertex << "\n";
+
+    graph.AddEdge(newVertex, 0);
+
     std::cout << "Liczba wierzcholkow: "
               << graph.NumberOfVertices() << "\n";
 

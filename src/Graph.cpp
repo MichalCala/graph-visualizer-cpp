@@ -21,6 +21,29 @@ Graph::Graph(int vertices, bool isDirected)
     );
 }
 
+
+int Graph::AddVertex()
+{
+    // Numer nowego wierzcholka
+    int newVertex = numberOfVertices;
+
+    // Dodanie nowej kolumny do kazdego istniejacego wiersza
+    for (auto& row : adjacencyMatrix)
+    {
+        row.push_back(false);
+    }
+
+    // nowy wiersz
+    adjacencyMatrix.emplace_back(
+        numberOfVertices + 1,
+        false
+    );
+
+    ++numberOfVertices;
+
+    return newVertex;
+}
+
 void Graph::AddEdge(int from, int to)
 {
     if (from < 0 || from >= numberOfVertices ||

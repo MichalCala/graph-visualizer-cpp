@@ -32,7 +32,8 @@ int main()
     graph.AddEdge(0, 8);
 
     // 2. Pozycje wierzcholkow
-    std::array<sf::Vector2f, 10> positions = {{
+    
+    std::vector<sf::Vector2f> positions = {
         {110.f, 260.f},  // 0
         {245.f, 160.f},  // 1
         {370.f, 160.f},  // 2
@@ -43,7 +44,7 @@ int main()
         {530.f, 55.f},   // 7
         {220.f, 410.f},  // 8
         {790.f, 460.f}   // 9
-    }};
+    };
 
     // 3. Stworzenie okna
     sf::RenderWindow window(
@@ -63,6 +64,9 @@ int main()
 
     // Wierzcholek, od ktorego rozpoczniemy DFS
     int startVertex = 0;
+    // Pierwszy wierzcholek tworzonej krawedzi
+    // -1 oznacza, ze zaden nie zostal wybrany
+    int edgeStartVertex = -1;
 
     // Kolejnosc odwiedzania wierzcholkow
     std::vector<int> dfsOrder;
@@ -129,32 +133,107 @@ int main()
             }
 
             // Obsluga klikniecia mysza
+            
             if (const auto* mouse = event->getIf<sf::Event::MouseButtonPressed>())
             {
+                sf::Vector2f clickPosition{
+                static_cast<float>(mouse->position.x),
+                static_cast<float>(mouse->position.y)
+                };
+
+                // Sprawdzamy, czy kliknieto istniejacy wierzcholek
+                int clickedVertex = -1;
+                bool tooClose = false;
+
+                for (int i = 0; i < graph.NumberOfVertices(); ++i)
+                {
+                    float dx = clickPosition.x - positions[i].x;
+                    float dy = clickPosition.y - positions[i].y;
+
+                    float distanceSquared = dx * dx + dy * dy;
+
+                    if (distanceSquared <= 22.f * 22.f)
+                    {
+                        clickedVertex = i;
+                        break;
+                    }
+
+                    if (distanceSquared < 50.f * 50.f)
+                    {
+                        tooClose = true;
+                    }
+                }
+
+                // =========================================
+                // LEWY PRZYCISK - wybor lub dodanie wierzcholka
+                // =========================================
+
                 if (mouse->button == sf::Mouse::Button::Left)
                 {
-                    for (int i = 0; i < graph.NumberOfVertices(); ++i)
+                    edgeStartVertex = -1;
+
+                    if (clickedVertex != -1)
                     {
-                        float dx = mouse->position.x - positions[i].x;
-                        float dy = mouse->position.y - positions[i].y;
-
-                        // Sprawdzamy, czy kliknieto wewnatrz kola
-                        if (dx * dx + dy * dy <= 22.f * 22.f)
+                        // Wybrano wierzcholek poczatkowy DFS
+                        startVertex = clickedVertex;
+                    }
+                    else if (!tooClose)
+                    {
+                        // Sprawdzamy, czy nowe kolo zmiesci sie w oknie
+                        if (clickPosition.x >= 22.f &&
+                        clickPosition.x <= 878.f &&
+                        clickPosition.y >= 22.f &&
+                        clickPosition.y <= 578.f)
                         {
-                            startVertex = i;
+                            int newVertex = graph.AddVertex();
 
-                            // Zatrzymujemy poprzednia animacje
+                            positions.push_back(clickPosition);
+
+                            startVertex = newVertex;
+                        }
+                    }
+
+                    // Reset poprzedniej animacji
+                    animating = false;
+                    nextStep = 0;
+                    dfsOrder.clear();
+
+                    visited.assign(graph.NumberOfVertices(), false);
+                }
+
+                // =========================================
+                // PRAWY PRZYCISK - tworzenie krawedzi
+                // =========================================
+
+                if (mouse->button == sf::Mouse::Button::Right)
+                {
+                    if (clickedVertex != -1)
+                    {
+                        // Pierwsze klikniecie
+                        if (edgeStartVertex == -1)
+                        {
+                            edgeStartVertex = clickedVertex;
+                        }
+                        // Drugie klikniecie
+                        else
+                        {
+                            graph.AddEdge(edgeStartVertex, clickedVertex);
+
+                            // Konczymy tworzenie krawedzi
+                            edgeStartVertex = -1;
+
+                            // Resetujemy poprzednia animacje DFS
                             animating = false;
                             nextStep = 0;
                             dfsOrder.clear();
-                            std::fill(
-                                visited.begin(),
-                                visited.end(),
-                                false
-                            );
 
-                            break;
+                            visited.assign(graph.NumberOfVertices(), false);
                         }
+                    }
+                    else
+                    {
+                        // Klikniecie pustego miejsca anuluje tworzenie
+                        edgeStartVertex = -1;
                     }
                 }
             }
@@ -249,19 +328,24 @@ int main()
         vertex.setOrigin({22.f, 22.f});
         vertex.setPosition(positions[i]);        
         // Kolorowanie wierzcholkow
-        if (visited[i])
+        if (i == edgeStartVertex)
         {
-            // Odwiedzony wierzcholek - zielony
+            // Pierwszy wierzcholek nowej krawedzi - fioletowy
+            vertex.setFillColor(sf::Color(170, 90, 230));
+        }
+        else if (visited[i])
+        {
+            // Odwiedzony przez DFS - zielony
             vertex.setFillColor(sf::Color(50, 200, 100));
         }
         else if (i == startVertex)
         {
-            // Wybrany wierzcholek startowy - zolty
+            // Wierzcholek startowy DFS - zolty
             vertex.setFillColor(sf::Color(255, 200, 50));
         }
         else
         {
-            // Nieodwiedzony wierzcholek - niebieski
+            // Pozostale wierzcholki - niebieskie
             vertex.setFillColor(sf::Color(70, 150, 255));
         }
 
